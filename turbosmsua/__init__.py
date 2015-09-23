@@ -1,17 +1,43 @@
 # -*- coding: utf-8 -*-
 from suds.client import Client
+import threading
 
 
 class Turbosms:
+    username = None
+    password = None
 
-    def __init__(self, login, password):
+    reauth_after = None
+
+    def __init__(self, username, password):
+        self.username = username
+        self.password = password
         self.client = Client('http://turbosms.in.ua/api/wsdl.html')
-        auth_result = self.client.service.Auth(login, password).encode('utf8')
-        
-        print auth_result
 
+        self.reauth_after = 120
+
+        # Do auth
+        self.authenticate()
+
+    def authenticate(self):
+        """
+        Currently the 'auth session' at Turbosms drops after
+        an undefined time span. 
+        The code below will try to ensure the session is
+        by requesting the 'auth session' again.
+        """
+
+        auth_result = self.client.service.Auth(
+            self.username, self.password
+        ).encode('utf8')
+        
+        # Some debug
+        print "TurboSMS authentication attempt"
+        
         if auth_result != "Вы успешно авторизировались":
             raise ValueError("Auth error: %s" % auth_result)
+
+        threading.Timer(self.reauth_after, self.authenticate).start()
 
     def balance(self):
         balance_result = self.client.service.GetCreditBalance().encode('utf8')
@@ -44,9 +70,18 @@ class Turbosms:
         destinations_formated = ",".join(map(format_destination, destinations))
 
         if not wappush:
-            send_result = self.client.service.SendSMS(sender, destinations_formated, text.decode('utf8')).ResultArray
+            send_result = self.client.service.SendSMS(
+                sender,
+                destinations_formated,
+                text.decode('utf8')
+            ).ResultArray
         else:
-            send_result = self.client.service.SendSMS(sender, destinations_formated, text.decode('utf8'), wappush).ResultArray
+            send_result = self.client.service.SendSMS(
+                sender,
+                destinations_formated,
+                text.decode('utf8'),
+                wappush
+            ).ResultArray
 
         send_status = send_result.pop(0).encode('utf8')
 
