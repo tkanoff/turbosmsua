@@ -37,7 +37,10 @@ class Turbosms:
         if auth_result != "Вы успешно авторизировались":
             raise ValueError("Auth error: %s" % auth_result)
 
-        threading.Timer(self.reauth_after, self.authenticate).start()
+        # Do daemonize for more control
+        t_timer = threading.Timer(self.reauth_after, self.authenticate)
+        t_timer.daemon = True
+        t_timer.start()
 
     def balance(self):
         balance_result = self.client.service.GetCreditBalance().encode('utf8')
