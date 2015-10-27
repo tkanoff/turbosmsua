@@ -31,18 +31,14 @@ class Turbosms:
             self.username, self.password
         ).encode('utf8')
         
-        # Some debug
-        print "TurboSMS authentication attempt"
+        # Info
+        print "turbosms authentication attempt"
         
         if auth_result != "Вы успешно авторизировались":
             raise ValueError("Auth error: %s" % auth_result)
 
-        # Do daemonize for more control
-        t_timer = threading.Timer(self.reauth_after, self.authenticate)
-        t_timer.daemon = True
-        t_timer.start()
-
     def balance(self):
+        self.authenticate()
         balance_result = self.client.service.GetCreditBalance().encode('utf8')
 
         try:
@@ -53,6 +49,7 @@ class Turbosms:
         return balance
 
     def send_text(self, sender, destinations, text, wappush=False):
+        self.authenticate()
         if not type(destinations) is list:
             destinations = [destinations]
 
@@ -95,5 +92,6 @@ class Turbosms:
         return to_return
 
     def message_status(self, message_id):
+        self.authenticate()
         status = self.client.service.GetMessageStatus(message_id)
         return status.encode('utf8')
